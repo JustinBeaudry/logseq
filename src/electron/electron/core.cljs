@@ -2,7 +2,8 @@
   (:require [electron.handler :as handler]
             [electron.search :as search]
             [electron.updater :refer [init-updater]]
-            [electron.utils :refer [*win mac? win32? linux? prod? dev? logger open get-win-from-sender]]
+            [electron.utils :refer [*win mac? win32? linux? prod? dev? logger
+                                    open send-to-renderer get-win-from-sender]]
             [electron.configs :as cfgs]
             [clojure.string :as string]
             [promesa.core :as p]
@@ -17,7 +18,8 @@
             [electron.git :as git]
             [electron.window :as win]
             ["/electron/utils" :as utils]
-            [goog.object :as gobj]))
+            [goog.object :as gobj]
+            [clojure.string :as string]))
 
 (defonce LSP_SCHEME "logseq")
 (defonce FILE_LSP_SCHEME "lsp")
@@ -46,32 +48,37 @@
   (.setAsDefaultProtocolClient app LSP_SCHEME)
 
   (.registerFileProtocol
-    protocol "assets"
-    (fn [^js request callback]
-      (let [url (.-url request)
-            path (string/replace url "assets://" "")
-            path (js/decodeURIComponent path)]
-        (callback #js {:path path}))))
+   protocol "assets"
+   (fn [^js request callback]
+     (let [url (.-url request)
+           path (string/replace url "assets://" "")
+           path (js/decodeURIComponent path)]
+       (callback #js {:path path}))))
 
   (.registerFileProtocol
-    protocol FILE_LSP_SCHEME
-    (fn [^js request callback]
-      (let [url (.-url request)
-            url' ^js (js/URL. url)
-            [_ ROOT] (if (string/starts-with? url PLUGIN_URL)
-                         [PLUGIN_URL PLUGINS_ROOT]
-                         [STATIC_URL js/__dirname])
+   protocol FILE_LSP_SCHEME
+   (fn [^js request callback]
+     (let [url (.-url request)
+           url' ^js (js/URL. url)
+           [_ ROOT] (if (string/starts-with? url PLUGIN_URL)
+                      [PLUGIN_URL PLUGINS_ROOT]
+                      [STATIC_URL js/__dirname])
 
-            path' (.-pathname url')
-            path' (js/decodeURIComponent path')
-            path' (.join path ROOT path')]
+           path' (.-pathname url')
+           path' (js/decodeURIComponent path')
+           path' (.join path ROOT path')]
 
-        (callback #js {:path path'}))))
+       (callback #js {:path path'}))))
 
   (.on app "open-url"
        (fn [event url]
-         (prn {:url url
-               :event event})))
+         (.info logger "open-url" (str {:url url
+                                        :event event}))
+
+         (let [parsed-url (js/URL. url)]
+           (when (and (= "logseq:" (.-protocol parsed-url))
+                      (= "auth-callback" (.-host parsed-url)))
+             (send-to-renderer "loginCallback" (.get (.-searchParams parsed-url) "code"))))))
 
   #(do
      (.unregisterProtocol protocol FILE_LSP_SCHEME)
