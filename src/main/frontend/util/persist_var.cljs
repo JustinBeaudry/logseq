@@ -49,8 +49,8 @@
     (get-in @*value [(state/get-current-repo) :value]))
 
   IReset
-  (-reset! [o new-value]
-    "Deprecated - use (.reset-value! o) instead."
+  (-reset!                              ;    Deprecated - use (.reset-value! o) instead.
+    [o new-value]
     (swap! *value (fn [o] (assoc-in @*value [(state/get-current-repo) :value] new-value))))
 
 

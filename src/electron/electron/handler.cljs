@@ -17,7 +17,8 @@
             [electron.search :as search]
             [electron.git :as git]
             [electron.plugin :as plugin]
-            [electron.window :as win]))
+            [electron.window :as win]
+            [electron.file-sync-rsapi :as rsapi]))
 
 (defmulti handle (fn [_window args] (keyword (first args))))
 
@@ -350,6 +351,31 @@
         windows (win/get-graph-all-windows dir)
         windows (filter #(.isVisible %) windows)]
     (> (count windows) 1)))
+
+;;;;;;;;;;;;;;;;;;;;;;;
+;; file-sync-rs-apis ;;
+;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmethod handle :get-local-files-meta [_ args]
+  (apply rsapi/get-local-files-meta (rest args)))
+
+(defmethod handle :get-local-all-files-meta [_ args]
+  (apply rsapi/get-local-all-files-meta (rest args)))
+
+(defmethod handle :rename-local-file [_ args]
+  (apply rsapi/rename-local-file (rest args)))
+
+(defmethod handle :delete-local-files [_ args]
+  (apply rsapi/delete-local-files (rest args)))
+
+(defmethod handle :update-local-files [_ args]
+  (apply rsapi/update-local-files (rest args)))
+
+(defmethod handle :delete-remote-files [_ args]
+  (apply rsapi/delete-remote-files (rest args)))
+
+(defmethod handle :update-remote-file [_ args]
+  (apply rsapi/update-remote-file (rest args)))
 
 (defmethod handle :default [args]
   (println "Error: no ipc handler for: " (bean/->js args)))
