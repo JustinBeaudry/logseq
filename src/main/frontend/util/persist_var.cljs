@@ -15,9 +15,12 @@
 (defprotocol ISave
   (-save [this]))
 
+(defprotocol IResetValue
+  (-reset-value! [this new graph]))
+
 (deftype PersistVar [*value location]
-  Object
-  (reset-value! [_ new graph]
+  IResetValue
+  (-reset-value! [_ new graph]
     (reset! *value (assoc-in @*value [graph :value] new)))
 
   ILoad
@@ -49,7 +52,7 @@
     (get-in @*value [(state/get-current-repo) :value]))
 
   IReset
-  (-reset!                              ;    Deprecated - use (.reset-value! o) instead.
+  (-reset!            ;    Deprecated - use (.reset-value! o) instead.
     [o new-value]
     (swap! *value (fn [o] (assoc-in @*value [(state/get-current-repo) :value] new-value))))
 
